@@ -1,3 +1,4 @@
+const groupChatModel = require("../models/groupChatModel");
 const messageModel = require("../models/messageModel");
 const mongoose = require("mongoose");
 const getChatHistory = async (user1, user2) => {
@@ -87,8 +88,57 @@ const getLastMessages = async (userId) => {
     return [];
   }
 };
+const getLastChatsForAllGroups = async () => {
+  try {
+    const lastChats = await groupChatModel.aggregate([
+  { $sort: { groupId: 1, createdAt: -1 } },
+
+  {
+    $group: {
+      _id: "$groupId",
+      lastMessage: { $first: "$$ROOT" }
+    }
+  },
+
+  {
+    $replaceRoot: { newRoot: "$lastMessage" }
+  },
+
+  {
+    $lookup: {
+      from: "users",                 // your users collection
+      localField: "senderId",        // correct field name
+      foreignField: "_id",
+      as: "senderDetails"
+    }
+  },
+
+  {
+    $unwind: "$senderDetails"
+  },
+
+  {
+    $project: {
+      _id: 1,
+      groupId: 1,
+      text: 1,                       // use 'text', not 'message'
+      createdAt: 1,
+      "senderDetails._id": 1,
+      "senderDetails.name": 1
+    }
+  }
+]);
+
+
+    return lastChats;
+  } catch (error) {
+    throw new Error("Failed to fetch last chats: " + error.message);
+  }
+};
 
 
 
 
-module.exports = { getChatHistory,getLastMessages };
+
+
+module.exports = { getChatHistory,getLastMessages,getLastChatsForAllGroups };

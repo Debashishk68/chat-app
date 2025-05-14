@@ -7,6 +7,7 @@ const Groups = () => {
   const [selectedChat, setSelectedChat] = useState(null);
   const [typingUserId, setTypingUserId] = useState(null);
   const [groups, setGroups] = useState([]);
+  const [lastChat, setLastChat] = useState(null);
 
   const dispatch = useDispatch();
 
@@ -40,6 +41,20 @@ const Groups = () => {
       socket.off("getGroup");
     };
   }, [])
+   useEffect(() => {
+      socket.emit("getLastChat");
+
+    
+    socket.on("getLastChat",(data) => {
+      console.log("Received last chat data:", data);
+      if (data) {
+      setLastChat(data);
+      }
+    })
+    return () => {
+      socket.off("getLastChat");
+    }
+  }, []);
 
   const handleClick = (index, group) => {
     setSelectedChat(index);
@@ -77,7 +92,15 @@ const Groups = () => {
                 {typingUserId === group._id ? (
                   <span className="text-[#fe4b09]">typing...</span>
                 ) : (
-                  group.latestMsg || "No messages yet"
+                  lastChat.map(msg => (
+                    <div key={msg.id} className="text-sm text-gray-500 truncate max-w-[200px]">
+                      {msg.groupId === group._id ?(
+                        <div> {msg.senderDetails.name}: {msg.text}</div>
+                      ): "No messages yet"}
+                     
+
+                    </div>
+                  )) 
                 )}
               </p>
             </div>

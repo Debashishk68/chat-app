@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const isLoggedIn = require('../../middlewares/isLoggedIn');
-const User = require('../../models/userModel'); // Using PascalCase for models
-const { getGroups } = require('../../controllers/groupController');
+const User = require('../../models/userModel'); 
 
 
 const path = require('path');
@@ -44,14 +43,6 @@ router.get('/users', isLoggedIn, async (req, res) => {
     }
 });
 
-router.post('/grouppic', upload.single('file'), (req, res) => {
-    if (req.file) {
-      res.status(200).json({ message: 'File uploaded successfully!' });
-    } else {
-      res.status(400).json({ message: 'No file uploaded!' });
-    }
-  });
 
-router.get('/groups',isLoggedIn,getGroups);
 
 module.exports = router;

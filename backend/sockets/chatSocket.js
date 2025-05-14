@@ -1,6 +1,7 @@
 const {
   getChatHistory,
   getLastMessages,
+  getLastChatsForAllGroups,
 } = require("../controllers/messageController");
 const chatModel = require("../models/chatModel");
 const messageModel = require("../models/messageModel");
@@ -238,38 +239,50 @@ function chatSocketHandler(socket, io) {
         senderPic: user?.profileImg || "https://i.pravatar.cc/150?img=3",
       });
 
-   await groupChatModel.create({
-     text: message,
-     senderId,
-     groupId,
-     senderName: user?.name,
-     time: new Date().toLocaleTimeString([], {
-       hour: "2-digit",
-       minute: "2-digit",
-     }),
-
-   });
-    
+      await groupChatModel.create({
+        text: message,
+        senderId,
+        groupId,
+        senderName: user?.name,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      });
     } catch (error) {
       console.log("Error sending group message:", error);
     }
   });
   // Handle fetching group chat history
-  socket.on("group-chat-history", async(data)=>{
+  socket.on("group-chat-history", async (data) => {
     const { groupId } = data || {};
     if (!groupId) {
       console.error("Invalid groupId:", data);
       return;
     }
     try {
-      const messages = await groupChatModel.find({ groupId }).populate("senderId", "-password");
+      const messages = await groupChatModel
+        .find({ groupId })
+        .populate("senderId", "-password");
       socket.emit("group-chat-history", messages);
     } catch (error) {
       console.log("Error fetching group chat history:", error);
     }
-  })
+  });
 
-  // Handle user disconnect
+  socket.on("getLastChat", async () => {
+    console.log("Fetching last chats for all groups");
+    try {
+      const lastChats = await getLastChatsForAllGroups();
+      socket.emit("getLastChat", lastChats); // Emit array of last messages per group
+    } catch (error) {
+      console.log("Error fetching last chats:", error);
+      socket.emit("getLastChat", []); // Optional: emit empty if error
+    }
+  });
+ 
+
+  // Handle user disconnecta
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
     if (socket.userName && users[socket.userName]) {

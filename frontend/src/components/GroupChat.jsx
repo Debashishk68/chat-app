@@ -79,7 +79,7 @@ const GroupChatbox = () => {
   useEffect(() => {
     socket.emit("group-chat-history", { groupId });
     socket.on("group-chat-history", (data) => {
-      console.log("Received group chat history:", data);
+      // console.log("Received group chat history:", data);
       setMessages(data);
     });
   }, [groupId]);

@@ -136,9 +136,36 @@ const getLastChatsForAllGroups = async () => {
   }
 };
 
+const unRead = async () => {
+  try {
+    const unreadMessages = await messageModel.aggregate([
+      {
+        $match: {
+          isRead: false, 
+        }
+      },
+      {
+        $group: {
+          _id: "$sender", // group by sender (i.e., who sent the unread messages)
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          userId: "$_id",
+          count: 1,
+          _id: 0
+        }
+      }
+    ]);
+
+    return unreadMessages;
+  } catch (error) {
+    console.error("Error fetching unread messages:", error);
+    return [];
+  }
+};
 
 
 
-
-
-module.exports = { getChatHistory,getLastMessages,getLastChatsForAllGroups };
+module.exports = { getChatHistory,getLastMessages,getLastChatsForAllGroups,unRead };

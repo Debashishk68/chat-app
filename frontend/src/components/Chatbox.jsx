@@ -46,10 +46,6 @@ const Chatbox = ({ Id }) => {
     };
   }, [Id, userId]);
 
-
-
-
-
   useEffect(() => {
     const handleMessage = (msg) => {
       console.log(msg)
@@ -123,7 +119,7 @@ const Chatbox = ({ Id }) => {
       ) : (
         <>
           {/* Messages Section */}
-          <div className="bg-white w-[63vw] h-[25.5rem] max-md:w-[90vw] rounded-2xl ml-2 mt-1 p-4 overflow-y-auto shadow-md flex flex-col gap-3">
+          <div className="bg-white w-[63vw] h-[24.5rem] max-md:w-[90vw] rounded-2xl ml-2 mt-1 p-4 overflow-y-auto flex flex-col gap-3">
             {messages.map((msg, idx) => (
               <div
                 key={idx}

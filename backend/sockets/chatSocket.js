@@ -2,8 +2,9 @@ const {
   getChatHistory,
   getLastMessages,
   getLastChatsForAllGroups,
+  unRead,
 } = require("../controllers/messageController");
-const chatModel = require("../models/chatModel");
+const GroupModel = require("../models/chatModel");
 const messageModel = require("../models/messageModel");
 const { ObjectId } = require("mongodb");
 const fs = require("fs");
@@ -30,49 +31,58 @@ function chatSocketHandler(socket, io) {
   });
 
   // Handle sending chat message
-  socket.on("chat message", async (msg) => {
-    const { Id, selectedUserId, message, userName } = msg || {};
+socket.on("chat message", async (msg) => {
+  const { Id, selectedUserId, message, userName } = msg || {};
 
-    if (!Id || !selectedUserId || !message || !userName) {
-      console.error("Invalid message data:", msg);
-      return;
-    }
+  // Basic validation
+  if (!Id || !selectedUserId || !message || !userName) {
+    console.error("Missing fields in message data:", msg);
+    return;
+  }
 
-    if (!isValidObjectId(Id) || !isValidObjectId(selectedUserId)) {
-      console.error("Invalid ObjectId(s) in chat message:", {
-        Id,
-        selectedUserId,
+  if (!isValidObjectId(Id) || !isValidObjectId(selectedUserId)) {
+    console.error("Invalid ObjectId(s) in chat message:", { Id, selectedUserId });
+    return;
+  }
+
+  try {
+    // Save message to DB
+    await messageModel.create({
+      sender: Id,
+      chat: selectedUserId,
+      content: message,
+    });
+
+    console.log("Message saved to database:", message);
+
+    // Get latest messages for both users
+    const senderLatest = await getLastMessages(Id);
+    const receiverLatest = await getLastMessages(selectedUserId);
+
+    // Emit to receiver if they are connected
+    if (users[userName]) {
+      const receiverSocketId = users[userName].id;
+
+      io.to(receiverSocketId).emit("latest message", receiverLatest);
+      io.to(receiverSocketId).emit("chat message", {
+        message,
+        userName: socket.userName, // sender's username
       });
-      return;
+
+      // Emit unread messages to receiver
+      const unreadMessages = await unRead();
+      io.to(receiverSocketId).emit("unreadMessages", unreadMessages);
+    } else {
+      console.log("Receiver user not connected:", userName);
     }
 
-    try {
-      await messageModel.create({
-        sender: Id,
-        chat: selectedUserId,
-        content: message,
-      });
+    // Emit updated latest messages to sender
+    io.to(socket.id).emit("latest message", senderLatest);
+  } catch (error) {
+    console.error("Error handling chat message:", error);
+  }
+});
 
-      console.log("Message saved to database:", message);
-
-      const senderLatest = await getLastMessages(Id);
-      const receiverLatest = await getLastMessages(selectedUserId);
-
-      if (users[userName]) {
-        io.to(users[userName].id).emit("latest message", receiverLatest);
-        io.to(users[userName].id).emit("chat message", {
-          message,
-          userName: socket.userName,
-        });
-      } else {
-        console.log("User not found:", userName);
-      }
-
-      io.to(socket.id).emit("latest message", senderLatest);
-    } catch (error) {
-      console.error("Error saving message to database:", error);
-    }
-  });
 
   // Handle fetching chat history between two users
   socket.on("chat history", async (userData) => {
@@ -168,23 +178,22 @@ function chatSocketHandler(socket, io) {
       const { name, users, admin, isGroupChat, file, description } = groupData;
 
       let groupImage = null;
-      if (file) {
-        const base64Data = file.includes(",") ? file.split(",")[1] : file;
+      if (file && typeof file === "string" && file.startsWith("data:image/")) {
+        const base64Data = file.split(",")[1];
         const buffer = Buffer.from(base64Data, "base64");
-
         const filePath = `uploads/group-${Date.now()}.png`;
-        fs.writeFileSync(filePath, buffer);
 
+        fs.writeFileSync(filePath, buffer);
         groupImage = filePath;
       }
-      await chatModel.create({
+      await GroupModel.create({
         name,
         users,
         isGroupChat,
         groupImage,
         description,
         admin,
-        roomId: data.newRoomId,
+        roomId: newRoomId,
       });
       socket.join(newRoomId);
     } catch (error) {
@@ -205,9 +214,10 @@ function chatSocketHandler(socket, io) {
       return;
     }
     try {
-      const groups = await chatModel
-        .find({ users: userId })
-        .populate("users", "-password");
+      const groups = await GroupModel.find({ users: userId }).populate(
+        "users",
+        "-password"
+      );
       socket.emit("getGroup", groups);
     } catch (error) {
       console.log("Error fetching group:", error);
@@ -231,10 +241,7 @@ function chatSocketHandler(socket, io) {
         userName: socket.userName,
         senderId,
         groupId,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        time: new Date(),
         senderName: user?.name,
         senderPic: user?.profileImg || "https://i.pravatar.cc/150?img=3",
       });
@@ -244,11 +251,10 @@ function chatSocketHandler(socket, io) {
         senderId,
         groupId,
         senderName: user?.name,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        time: new Date(),
       });
+      const lastChats = await getLastChatsForAllGroups();
+      io.emit("getLastChat", lastChats);
     } catch (error) {
       console.log("Error sending group message:", error);
     }
@@ -280,9 +286,36 @@ function chatSocketHandler(socket, io) {
       socket.emit("getLastChat", []); // Optional: emit empty if error
     }
   });
- 
 
-  // Handle user disconnecta
+  socket.on("unreadMessages", async () => {
+    try {
+      const unreadMessages = await unRead();
+      socket.emit("unreadMessages", unreadMessages);
+    } catch (error) {
+      console.error("Error fetching unread messages:", error);
+      socket.emit("unreadMessages", []);
+    }
+  });
+
+  socket.on("readmessage", async (data) => {
+    const { userId } = data || {};
+    if (!userId ) {
+      console.error("Invalid userId or chatId:", data);
+      return;
+    }
+    try {
+    const message=  await messageModel.updateMany(
+        { chat: userId, isRead: false },
+        { $set: { isRead: true } }
+      );
+       const unreadMessages = await unRead();
+      io.emit("unreadMessages", unreadMessages);
+     io.emit("unreadMessages",unreadMessages)
+    } catch (error) {
+      console.error("Error updating read status:", error);
+    }
+  });
+  // Handle user disconnect
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
     if (socket.userName && users[socket.userName]) {

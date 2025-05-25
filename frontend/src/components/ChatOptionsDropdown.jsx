@@ -6,14 +6,12 @@ import CreateGroupModal from "./CreateGroupModal";
 import { useSelector } from "react-redux";
 import socket from "../utils/socket";
 import { v4 as uuidv4 } from 'uuid';
-import useUploadGroupPic from "../hooks/useGroups";
 
 
 const ChatOptionsDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const { personsData} = useSelector((state)=>state.persons);
-  const { mutate:upload } = useUploadGroupPic();
 
   // console.log(personsData)
 

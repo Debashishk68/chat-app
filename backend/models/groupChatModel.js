@@ -19,7 +19,7 @@ const groupChatSchema = new mongoose.Schema(
     seenBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     groupId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Chat",
+      ref: "Group",
       required: true,
     },
     time: {

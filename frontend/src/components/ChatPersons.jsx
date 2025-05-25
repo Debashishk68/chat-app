@@ -11,23 +11,18 @@ const ChatPersons = ({ Id }) => {
   const [chats, setChats] = useState([]);
   const [latestChats, setLatestChats] = useState([]);
   const [typingUserId, setTypingUserId] = useState(null);
-  const { selectedItem } = useSelector((state)=>state.sidebar)
+  const [unreadCounts, setUnreadCounts] = useState({}); // Keep as object map
+  const { selectedItem } = useSelector((state) => state.sidebar);
 
   const { data, isSuccess } = useUsers();
-  
-   
-
 
   // Load all users
-
   useEffect(() => {
     if (isSuccess && data?.users) {
-      setChats(data.users); 
-      dispatch(setPersons({personsData:data.users}));
+      setChats(data.users);
+      dispatch(setPersons({ personsData: data.users }));
     }
-  }, [isSuccess, data]);
-  
-
+  }, [isSuccess, data, dispatch]);
 
   // Listen for latest messages
   useEffect(() => {
@@ -67,20 +62,40 @@ const ChatPersons = ({ Id }) => {
     };
   }, [typingUserId]);
 
+  // Listen for unread messages count and convert array to object map
+  useEffect(() => {
+    socket.emit("unreadMessages");
+
+    const handleUnreadMessages = (data) => {
+      const unreadMap = {};
+      data.forEach(({ userId, count }) => {
+        unreadMap[userId] = count;
+      });
+      console.log("Unread messages:", data);
+      setUnreadCounts(unreadMap);
+    };
+
+    socket.on("unreadMessages", handleUnreadMessages);
+
+    return () => {
+      socket.off("unreadMessages", handleUnreadMessages);
+    };
+  }, []);
+
   const handleClick = (name, avatar, index, userId) => {
     setSelectedChat(index);
+    socket.emit("readmessage", { userId: localStorage.getItem("userId") });
+    socket.on("readmessage", (data) => { console.log(data) });
     dispatch(setUser({ userName: name, userPic: avatar, userId }));
   };
 
- 
   const ChatPerson = ({ name, profileImg, userId, index, active }) => {
-    const latest = latestChats.find(
-      (chat) => chat.chatPartner._id === userId
-    );
+    const latest = latestChats.find((chat) => chat.chatPartner._id === userId);
+    const unreadCount = unreadCounts[userId] || 0;
 
     return (
       <div
-        className={`flex items-center p-3 cursor-pointer transition-all rounded-lg ${
+        className={`flex items-center p-3 cursor-pointer transition-all rounded-lg relative ${
           active ? "bg-gray-200" : "hover:bg-gray-100"
         }`}
         onClick={() => handleClick(name, profileImg, index, userId)}
@@ -101,7 +116,6 @@ const ChatPersons = ({ Id }) => {
             ) : (
               latest?.content || "No messages yet"
             )}
-           
           </p>
         </div>
 
@@ -114,17 +128,28 @@ const ChatPersons = ({ Id }) => {
                 })
               : ""}
           </p>
+          {/* Unread count badge */}
+          {unreadCount > 0  &&  (
+            <span className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full px-1">
+              {unreadCount}
+            </span>
+          )}
+          
         </div>
+        
       </div>
+      
     );
   };
 
   return (
     <div className="bg-white w-[30vw] max-md:w-[80vw] h-[82%] mt-1 ml-2 rounded-xl shadow-md">
       <h2 className="text-[15px] font-light ml-5 pt-3 text-gray-600 mb-4">
-        
-        {selectedItem==="chat"?"Chats":selectedItem==="group"?"Groups":null}
-        
+        {selectedItem === "chat"
+          ? "Chats"
+          : selectedItem === "group"
+          ? "Groups"
+          : null}
       </h2>
 
       <div className="space-y-2 h-[32vw] max-md:h-[20rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
@@ -141,9 +166,6 @@ const ChatPersons = ({ Id }) => {
       </div>
     </div>
   );
-}
-
-
-
+};
 
 export default ChatPersons;

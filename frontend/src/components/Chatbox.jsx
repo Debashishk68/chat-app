@@ -16,22 +16,26 @@ const Chatbox = ({ Id }) => {
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef(null);
 
-
   const handleInputBlur = () => {
-    socket.emit("stop typing", { userName, userId: localStorage.getItem("userId") });
+    socket.emit("stop typing", {
+      userName,
+      userId: localStorage.getItem("userId"),
+      receiverId: userId,
+    });
   };
 
   useEffect(() => {
     if (!Id || !userId || Id === "null" || userId === "null") {
-      console.warn("Skipping chat history emit due to invalid IDs", { Id, userId });
+      console.warn("Skipping chat history emit due to invalid IDs", {
+        Id,
+        userId,
+      });
       return;
     }
 
     socket.emit("chat history", { userId1: Id, userId2: userId });
 
     socket.on("chat history", (chatHistory) => {
-      console.log("Chat history received:", chatHistory);
-
       const formattedMessages = chatHistory.map((msg, index) => ({
         id: index + 1,
         text: msg.content,
@@ -40,23 +44,25 @@ const Chatbox = ({ Id }) => {
       }));
       setMessages(formattedMessages);
     });
-    
+
     return () => {
       socket.off("chat history");
     };
   }, [Id, userId]);
 
+
   useEffect(() => {
     const handleMessage = (msg) => {
-      console.log(msg)
-      if (msg.userName === userName) {
+      console.log(msg);
+      if (msg.userId === userId) {
         setMessages((prevmsg) => [
           ...prevmsg,
           {
             id: prevmsg.length + 1,
             text: msg.message,
             time: new Date().toLocaleTimeString(),
-            sender: msg.userName === localStorage.getItem("Name") ? "me" : "other",
+            sender:
+              msg.userName === localStorage.getItem("Name") ? "me" : "other",
           },
         ]);
       }
@@ -66,17 +72,25 @@ const Chatbox = ({ Id }) => {
 
     return () => {
       socket.off("chat message", handleMessage);
-      setMessage("")
+      setMessage("");
     };
   }, [userName]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    socket.emit("readmessage", {
+      userId: Id,
+      selectedUserId: localStorage.getItem("userId"),
+    });
   }, [messages]);
 
   const handleChange = (e) => {
     setMessage(e.target.value);
-    socket.emit("typing", {userName,userId:localStorage.getItem("userId")});
+    socket.emit("typing", {
+      userName,
+      userId: localStorage.getItem("userId"),
+      receiverId: userId,
+    });
   };
 
   const handleSendMessage = () => {
@@ -100,7 +114,11 @@ const Chatbox = ({ Id }) => {
       },
     ]);
 
-    socket.emit("stop typing", { userName,userId: localStorage.getItem("userId") });
+    socket.emit("stop typing", {
+      userName,
+      userId: localStorage.getItem("userId"),
+      receiverId: userId,
+    });
 
     socket.emit("chat message", newMessage);
     socket.emit("latest message", { userId: Id });

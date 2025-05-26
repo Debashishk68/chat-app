@@ -45,7 +45,7 @@ const Dashboard = () => {
     if (isSuccess && data?.userName) {
       setId(data.user);
       socket.connect();
-      socket.emit("register", { userName: data.userName });
+      socket.emit("register", { userId: data.user });
       localStorage.setItem("userId", data.user);
 
 

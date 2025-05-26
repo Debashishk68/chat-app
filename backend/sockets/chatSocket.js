@@ -23,66 +23,68 @@ function chatSocketHandler(socket, io) {
 
   // Register the user with socket
   socket.on("register", (userData) => {
-    if (!userData?.userName) return;
+    if (!userData?.userId) return;
 
-    socket.userName = userData.userName;
-    users[socket.userName] = socket;
+    socket.userId = userData.userId;
+    users[socket.userId] = socket;
     console.log("User registered:", Object.keys(users));
   });
 
   // Handle sending chat message
-socket.on("chat message", async (msg) => {
-  const { Id, selectedUserId, message, userName } = msg || {};
+  socket.on("chat message", async (msg) => {
+    const { Id, selectedUserId, message, userName } = msg || {};
 
-  // Basic validation
-  if (!Id || !selectedUserId || !message || !userName) {
-    console.error("Missing fields in message data:", msg);
-    return;
-  }
-
-  if (!isValidObjectId(Id) || !isValidObjectId(selectedUserId)) {
-    console.error("Invalid ObjectId(s) in chat message:", { Id, selectedUserId });
-    return;
-  }
-
-  try {
-    // Save message to DB
-    await messageModel.create({
-      sender: Id,
-      chat: selectedUserId,
-      content: message,
-    });
-
-    console.log("Message saved to database:", message);
-
-    // Get latest messages for both users
-    const senderLatest = await getLastMessages(Id);
-    const receiverLatest = await getLastMessages(selectedUserId);
-
-    // Emit to receiver if they are connected
-    if (users[userName]) {
-      const receiverSocketId = users[userName].id;
-
-      io.to(receiverSocketId).emit("latest message", receiverLatest);
-      io.to(receiverSocketId).emit("chat message", {
-        message,
-        userName: socket.userName, // sender's username
-      });
-
-      // Emit unread messages to receiver
-      const unreadMessages = await unRead();
-      io.to(receiverSocketId).emit("unreadMessages", unreadMessages);
-    } else {
-      console.log("Receiver user not connected:", userName);
+    // Basic validation
+    if (!Id || !selectedUserId || !message || !userName) {
+      console.error("Missing fields in message data:", msg);
+      return;
     }
 
-    // Emit updated latest messages to sender
-    io.to(socket.id).emit("latest message", senderLatest);
-  } catch (error) {
-    console.error("Error handling chat message:", error);
-  }
-});
+    if (!isValidObjectId(Id) || !isValidObjectId(selectedUserId)) {
+      console.error("Invalid ObjectId(s) in chat message:", {
+        Id,
+        selectedUserId,
+      });
+      return;
+    }
 
+    try {
+      // Save message to DB
+      await messageModel.create({
+        sender: Id,
+        chat: selectedUserId,
+        content: message,
+      });
+
+      console.log("Message saved to database:", message);
+
+      // Get latest messages for both users
+      const senderLatest = await getLastMessages(Id);
+      const receiverLatest = await getLastMessages(selectedUserId);
+
+      // Emit to receiver if they are connected
+      if (users[selectedUserId]) {
+        const receiverSocketId = users[selectedUserId].id;
+
+        io.to(receiverSocketId).emit("latest message", receiverLatest);
+        io.to(receiverSocketId).emit("chat message", {
+          message,
+          userId: socket.userId, // sender's userid
+        });
+
+        // Emit unread messages to receiver
+        const unreadMessages = await unRead();
+        io.to(receiverSocketId).emit("unreadMessages", unreadMessages);
+      } else {
+        console.log("Receiver user not connected:", userName);
+      }
+
+      // Emit updated latest messages to sender
+      io.to(socket.id).emit("latest message", senderLatest);
+    } catch (error) {
+      console.error("Error handling chat message:", error);
+    }
+  });
 
   // Handle fetching chat history between two users
   socket.on("chat history", async (userData) => {
@@ -129,13 +131,13 @@ socket.on("chat message", async (msg) => {
 
   // Handle typing event
   socket.on("typing", (data) => {
-    if (!data?.userName) {
+    if (!data?.receiverId) {
       console.error("Invalid typing data:", data);
       return;
     }
 
-    if (users[data.userName]) {
-      io.to(users[data.userName].id).emit("user typing", {
+    if (users[data.receiverId]) {
+      io.to(users[data.receiverId].id).emit("user typing", {
         typing: true,
         from: data.userId,
       });
@@ -145,13 +147,13 @@ socket.on("chat message", async (msg) => {
   });
 
   socket.on("stop typing", (data) => {
-    if (!data?.userName) {
+    if (!data?.receiverId) {
       console.error("Invalid stop typing data:", data);
       return;
     }
 
-    if (users[data.userName]) {
-      io.to(users[data.userName].id).emit("user stop typing", {
+    if (users[data.receiverId]) {
+      io.to(users[data.receiverId].id).emit("user stop typing", {
         typing: false,
         from: data.userId,
       });
@@ -160,8 +162,8 @@ socket.on("chat message", async (msg) => {
     }
   });
 
-  socket.on("isOnline", (userName) => {
-    if (users[userName]) {
+  socket.on("isOnline", (userId) => {
+    if (users[userId]) {
       socket.emit("isOnline", true);
     } else {
       socket.emit("isOnline", false);
@@ -299,18 +301,18 @@ socket.on("chat message", async (msg) => {
 
   socket.on("readmessage", async (data) => {
     const { userId } = data || {};
-    if (!userId ) {
+    if (!userId) {
       console.error("Invalid userId or chatId:", data);
       return;
     }
     try {
-    const message=  await messageModel.updateMany(
+      await messageModel.updateMany(
         { chat: userId, isRead: false },
         { $set: { isRead: true } }
       );
-       const unreadMessages = await unRead();
-      io.emit("unreadMessages", unreadMessages);
-     io.emit("unreadMessages",unreadMessages)
+      
+      const unreadMessages = await unRead();
+      io.to(users[userId].id).emit("unreadMessages", unreadMessages);
     } catch (error) {
       console.error("Error updating read status:", error);
     }
@@ -318,9 +320,9 @@ socket.on("chat message", async (msg) => {
   // Handle user disconnect
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
-    if (socket.userName && users[socket.userName]) {
-      delete users[socket.userName];
-      console.log("User removed from users list:", socket.userName);
+    if (socket.userId && users[socket.userId]) {
+      delete users[socket.userId];
+      console.log("User removed from users list:", socket.userId);
     }
   });
 }

@@ -45,6 +45,7 @@ const ChatPersons = ({ Id }) => {
   useEffect(() => {
     const handleTyping = (data) => {
       setTypingUserId(data.from);
+      console.log("User typing:", data);
     };
 
     const handleStopTyping = (data) => {

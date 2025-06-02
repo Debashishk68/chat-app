@@ -1,12 +1,8 @@
 import React from "react";
-import { FaPhone } from "react-icons/fa";
 import { FiSearch } from "react-icons/fi";
-
-import { BsThreeDots } from "react-icons/bs";
 import { useSelector } from "react-redux";
-import CreateGroupModal from "./CreateGroupModal";
 import { useState } from "react";
-import ProfileDropdown from "./ProfileViewing";
+import ProfileDropdown from "./ProfileDropDown";
 
 const ChatPersonHeader = () => {
   const { userName, isUserSelected, userPic } = useSelector(
@@ -52,19 +48,17 @@ const ChatPersonHeader = () => {
               setIsProfileOpen(!isProfileOpen);
               console.log(isProfileOpen);
             }}
-            className="border-[1px] px-5 border-zinc-300 py-[8px] max-md:py-[5px] max-md:px-2 max-md:text-[8px] font-medium text-[14px] rounded-4xl"
+            className="border-[1px] cursor-pointer px-5 border-zinc-300 py-[8px] max-md:py-[5px] max-md:px-2 max-md:text-[8px] font-medium text-[14px] rounded-4xl"
           >
             Profile
           </span>
           <ProfileDropdown
-            user={{
-              isProfileOpen,
-              profilePic: userPic,
-              name: userName,
-              status: "online",
-              email: "john@example.com",
-              phone: "+1234567890",
+            isOpen={isProfileOpen}
+            data={{
+              userName: userName,
+              userPic: userPic,
             }}
+            onClose={() => setIsProfileOpen(false)}
           />
 
           <span className="border-[1px] px-5 bg-black text-white py-[8px] max-md:py-[5px] max-md:px-4 max-md:text-[8px] font-medium text-[14px] rounded-4xl">

@@ -7,6 +7,7 @@ import { setSelectedItem } from "../features/sidebar/sideBarSlice";
 import { useDispatch } from "react-redux";
 import { removeUser } from "../features/user/userSlice";
 import { FaUserGroup } from "react-icons/fa6";
+import { removeGroup } from "../features/groups/groupSlice";
 
 
 const Sidebar = () => {
@@ -17,6 +18,8 @@ const Sidebar = () => {
     setActive(id);
     dispatch(setSelectedItem(id));
     dispatch(removeUser())
+    dispatch(removeGroup());
+
   }
 
   useEffect(() => {

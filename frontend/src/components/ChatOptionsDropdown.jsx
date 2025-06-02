@@ -18,11 +18,7 @@ const ChatOptionsDropdown = () => {
   const handleClick = () => {
     setIsOpen(!isOpen);
   };
-  const DummyUsers = [
-    { _id: "1", name: "Alice" },
-    { _id: "2", name: "Bob" },
-    { _id: "3", name: "Charlie" },
-  ];
+
 
   const currentUserId = localStorage.getItem('userId');
 

@@ -4,10 +4,10 @@ import {
   AiOutlineEyeInvisible,
   AiOutlineCamera,
 } from "react-icons/ai";
-import blending from '../../public/blending.webp'
+import blending from "../../public/blending.webp";
 import useRegisterUser from "../hooks/useRegister";
 import { IoPersonCircleOutline } from "react-icons/io5";
-import {Link} from "react-router-dom"
+import { Link } from "react-router-dom";
 
 export default function RegisterPage() {
   const [profilePic, setProfilePic] = useState(null);
@@ -25,6 +25,7 @@ export default function RegisterPage() {
     isSuccess: isRegistered,
     isError,
     error: errorMessage,
+    isPending,
   } = useRegisterUser();
 
   const handleImageChange = (e) => {
@@ -36,8 +37,9 @@ export default function RegisterPage() {
   };
 
   const handleConfirmPasswordChange = (e) => {
-    setConfirmPassword(e.target.value);
-    if (password && e.target.value !== password) {
+    const value = e.target.value;
+    setConfirmPassword(value);
+    if (password && value !== password) {
       setError("Passwords do not match");
     } else {
       setError("");
@@ -46,154 +48,105 @@ export default function RegisterPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (name && email && password && file) {
+    if (name && email && password && file && !error) {
       registerUser({ name, email, password, file });
     }
     console.log({ name, email, password });
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white w-full max-w-4xl flex flex-col md:flex-row rounded-2xl shadow-lg overflow-hidden">
-        {/* Left Side: Registration Form */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center p-8">
-          <h2 className="text-2xl font-bold mb-6 text-center md:text-left">
-            Create an account
-          </h2>
+    <div className="min-h-screen bg-white">
+      <nav className="w-full flex justify-between items-center p-4 bg-white shadow-md flex-wrap">
+        <div className="text-xl font-bold">Connect</div>
+      </nav>
 
-          {/* Profile Picture Upload */}
-          <div className="flex flex-col items-center justify-center mb-6">
-            <label
-              htmlFor="profilePic"
-              className="cursor-pointer flex flex-col items-center group"
+      <div className="w-full flex flex-col items-center justify-center px-4 py-9">
+        <span className="text-2xl font-semibold font-sans">
+          Create Your account
+        </span>
+      </div>
+
+      <form onSubmit={handleSubmit} className="w-full rounded-lg space-y-4">
+        <div className="px-4 sm:px-[10vw] md:px-[15vw]">
+          <label className="block mb-1 font-medium">Username</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full max-w-md p-3 bg-gray-100 mb-8 rounded-xl focus:outline-blue-600"
+            placeholder="Enter your username "
+            required
+          />
+
+          <label className="block mb-1 font-medium">Email</label>
+          <input
+            type="text"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full max-w-md p-3 bg-gray-100 mb-8 rounded-xl focus:outline-blue-600"
+            placeholder="Enter your email "
+            required
+          />
+
+          <label className="block mb-1 font-medium">Password</label>
+          <div className="relative w-full max-w-md">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-3 bg-gray-100 rounded-xl pr-10 mb-8"
+              placeholder="Enter your password"
+              required
+            />
+            <span
+              className="absolute top-3.5 right-4 text-xl cursor-pointer text-gray-600"
+              onClick={() => setShowPassword(!showPassword)}
             >
-              <div className="relative w-28 h-28">
-                {profilePic ? (
-                  <img
-                    src={profilePic || "https://via.placeholder.com/100"}
-                    alt="Profile"
-                    className="w-full h-full rounded-full object-cover border-4 border-gray-300 shadow-lg transition-transform duration-300 group-hover:scale-110"
-                  />
-                ) : (
-                  <IoPersonCircleOutline className="w-full h-full rounded-full text-zinc-500 object-cover border-4 border-gray-300 shadow-lg transition-transform duration-300 group-hover:scale-110" />
-                )}
-
-                {/* Overlay with "Upload Profile" text */}
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full text-white text-sm font-semibold">
-                  <AiOutlineCamera className="text-white w-8 h-8 mb-1" />
-                  <span>Upload Profile</span>
-                </div>
-              </div>
-              <input
-                type="file"
-                id="profilePic"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageChange}
-              />
-            </label>
-            {/* Upload Image text below */}
-            <p className="mt-2 text-sm text-gray-600">
-              Upload an image for your profile
-            </p>
+              {showPassword ? <AiOutlineEyeInvisible /> : <AiOutlineEye />}
+            </span>
           </div>
 
-          <form className="w-full" onSubmit={handleSubmit}>
+          <label className="block mb-1 font-medium">Confirm Password</label>
+          <div className="relative w-full max-w-md">
             <input
-              type="text"
-              placeholder="Full Name"
-              className="w-full p-3 mb-4 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-gray-400"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              type={showConfirmPassword ? "text" : "password"}
+              value={confirmPassword}
+              onChange={handleConfirmPasswordChange}
+              className={`w-full p-3 bg-gray-100 rounded-xl mb-2 pr-10 ${
+                error ? "outline outline-red-500" : ""
+              }`}
+              placeholder="Enter your password"
               required
             />
-
-            <input
-              type="email"
-              placeholder="Email"
-              className="w-full p-3 mb-4 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-gray-400"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-
-            {/* Password Field with Eye Icon */}
-            <div className="relative mb-4">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                className="w-full p-3 pr-10 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-gray-400"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-4 text-gray-500"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <AiOutlineEyeInvisible size={20} />
-                ) : (
-                  <AiOutlineEye size={20} />
-                )}
-              </button>
-            </div>
-
-            {/* Confirm Password Field with Eye Icon */}
-            <div className="relative mb-4">
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirm Password"
-                className={`w-full p-3 pr-10 border rounded-md outline-none focus:ring-2 ${
-                  error
-                    ? "border-red-500 focus:ring-red-400"
-                    : "border-gray-300 focus:ring-gray-400"
-                }`}
-                value={confirmPassword}
-                onChange={handleConfirmPasswordChange}
-                required
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-4 text-gray-500"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                {showConfirmPassword ? (
-                  <AiOutlineEyeInvisible size={20} />
-                ) : (
-                  <AiOutlineEye size={20} />
-                )}
-              </button>
-            </div>
-
-            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-            <button
-              className="w-full bg-black text-white py-3 rounded-md font-semibold hover:bg-gray-900 transition duration-300"
-              disabled={error !== ""}
+            <span
+              className="absolute top-3.5 right-4 text-xl cursor-pointer text-gray-600"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
             >
-              Register
-            </button>
-          </form>
+              {showConfirmPassword ? (
+                <AiOutlineEyeInvisible />
+              ) : (
+                <AiOutlineEye />
+              )}
+            </span>
+            {error && <p className="text-red-500 text-sm mb-6">{error}</p>}
+            <div className="w-full flex flex-col items-center justify-center">
+              <button
+                type="submit"
+                className="w-full px-6 py-2 bg-sky-500 mt-2 text-white rounded-xl hover:bg-sky-700 transition"
+              >
+                {isPending ? "Registering..." : "Register"}
+              </button>
 
-          <p className="mt-6 text-sm text-center">
-            Already have an account?{" "}
-            <Link to="/login" className="font-bold text-black">
-              Log in
-            </Link>
-          </p>
+              <div className="text-center text-cyan-900 text-sm mt-2">
+                Already have an account?{" "}
+                <Link to="/login" className="text-cyan-700 hover:underline">
+                  Login
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
-
-        {/* Right Side: Image */}
-        <div className="hidden md:flex w-1/2 bg-gray-100 items-center justify-center">
-          <img
-            src={blending}
-            alt="Register"
-            className="w-[100%] h-full object-cover"
-          />
-        </div>
-      </div>
+      </form>
     </div>
   );
 }

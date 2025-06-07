@@ -6,6 +6,8 @@ import { IoMicOutline } from "react-icons/io5";
 import { LuCheckCheck } from "react-icons/lu";
 import { useSelector } from "react-redux";
 import socket from "../utils/socket";
+import ChatPersonHeader from "./ChatPersonHeader";
+import unamed from "../assets/unnamed.png";
 
 const Chatbox = ({ Id }) => {
   const { userName, isUserSelected, userPic, userId } = useSelector(
@@ -50,10 +52,8 @@ const Chatbox = ({ Id }) => {
     };
   }, [Id, userId]);
 
-
   useEffect(() => {
     const handleMessage = (msg) => {
-      console.log(msg);
       if (msg.userId === userId) {
         setMessages((prevmsg) => [
           ...prevmsg,
@@ -62,7 +62,7 @@ const Chatbox = ({ Id }) => {
             text: msg.message,
             time: new Date().toLocaleTimeString(),
             sender:
-              msg.userName === localStorage.getItem("Name") ? "me" : "other",
+              msg.sender === localStorage.getItem("userId") ? "me" : "other",
           },
         ]);
       }
@@ -72,9 +72,8 @@ const Chatbox = ({ Id }) => {
 
     return () => {
       socket.off("chat message", handleMessage);
-      setMessage("");
     };
-  }, [userName]);
+  }, [userId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -126,93 +125,109 @@ const Chatbox = ({ Id }) => {
   };
 
   return (
-    <div>
-      {!isUserSelected ? (
-        <div className="w-[70vw] h-screen flex flex-col justify-center items-center text-zinc-400">
-          <h2 className="text-xl font-semibold">
-            Select a chat to start messaging
-          </h2>
-          <p className="text-sm mt-2">Your messages will appear here.</p>
-        </div>
-      ) : (
-        <>
-          {/* Messages Section */}
-          <div className="bg-white w-[63vw] h-[24.5rem] max-md:w-[90vw] rounded-2xl ml-2 mt-1 p-4 overflow-y-auto flex flex-col gap-3">
-            {messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex ${
-                  msg.sender === "me" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div className="relative max-w-xs">
-                  <div
-                    className={`p-3 rounded-3xl ${
-                      msg.sender === "me"
-                        ? "bg-[#fe4b09] text-white rounded-br-none"
-                        : "bg-gray-200 text-black rounded-bl-none"
-                    }`}
-                  >
-                    {msg.text && <p>{msg.text}</p>}
+    <div className="flex flex-col h-screen w-[50vw] mx-auto">
+  <ChatPersonHeader />
+  {!isUserSelected ? (
+    <div className="flex-grow flex flex-col justify-center items-center text-zinc-400 px-4 text-center">
+      <h2 className="text-xl font-semibold">
+        Select a chat to start messaging
+      </h2>
+      <p className="text-sm mt-2">Your messages will appear here.</p>
+    </div>
+  ) : (
+    <>
+      {/* Messages Section */}
+      <div className="flex-grow p-4 overflow-y-auto bg-slate-50 flex flex-col gap-3">
+        {messages.map((msg, idx) => (
+          <div
+            key={idx}
+            className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
+          >
+            <div className="flex items-end gap-2 max-w-[85%] sm:max-w-[75%] md:max-w-md">
+              {msg.sender !== "me" && (
+                <img
+                  src={`http://localhost:3000/${userPic}`}
+                  alt="User Avatar"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              )}
 
-                    {msg.type === "image" && msg.images && (
-                      <div className="grid grid-cols-2 gap-1">
-                        {msg.images.map((img, index) => (
-                          <img
-                            key={index}
-                            src={img}
-                            alt="sent-img"
-                            className="w-20 h-20 rounded-lg"
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
+              <div className="flex flex-col">
+                <div
+                  className={`p-3 rounded-xl ${
+                    msg.sender === "me" ? "bg-[#d2e2f3]" : "bg-[#e9edf1]"
+                  }`}
+                >
+                  {msg.text && (
+                    <p className="text-sm text-gray-800 break-words">{msg.text}</p>
+                  )}
 
-                  <div
-                    className={`text-xs mt-1 flex items-center ${
-                      msg.sender === "me" ? "justify-end" : "justify-start"
-                    } text-gray-500`}
-                  >
-                    <span>{msg.time}</span>
-                    {msg.sender === "me" && (
-                      <LuCheckCheck className="ml-1 text-blue-500" />
-                    )}
-                  </div>
+                  {msg.type === "image" && msg.images && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                      {msg.images.map((img, index) => (
+                        <img
+                          key={index}
+                          src={img}
+                          alt="sent-img"
+                          className="w-24 h-24 object-cover rounded-lg"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  className={`text-xs mt-1 flex items-center ${
+                    msg.sender === "me" ? "justify-end" : "justify-start"
+                  } text-gray-500`}
+                >
+                  <span>{msg.time}</span>
+                  {msg.sender === "me" && (
+                    <LuCheckCheck className="ml-1 text-blue-500" />
+                  )}
                 </div>
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
 
-          {/* Input Section */}
-          <div className="relative flex justify-between items-center ml-2 mt-2">
-            <GoPaperclip className="absolute ml-2 z-10" />
-            <input
-              type="text"
-              placeholder="Write messages..."
-              onChange={handleChange}
-              onBlur={handleInputBlur}
-              value={message}
-              className="w-[54vw] h-14 relative border bg-white border-none rounded-xl px-12 p-3 outline-none focus:ring-2 focus:ring-blue-600"
-            />
-            <BsEmojiSmile className="absolute right-[150px]" />
-
-            <div className="flex gap-1">
-              <div className="p-4 bg-white rounded-xl">
-                <IoMicOutline size={20} />
-              </div>
-              <div
-                className="p-4 bg-[#fe4b09] cursor-pointer rounded-xl"
-                onClick={handleSendMessage}
-              >
-                <IoIosSend size={20} className="text-white cursor-pointer" />
-              </div>
+              {msg.sender === "me" && (
+                <img
+                  src={unamed}
+                  alt="User Avatar"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              )}
             </div>
           </div>
-        </>
-      )}
-    </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Section */}
+      <div className="relative flex items-center gap-2 p-4">
+        <GoPaperclip className="absolute left-5 z-10 text-gray-500" />
+        <input
+          type="text"
+          placeholder="Type a message..."
+          onChange={handleChange}
+          onBlur={handleInputBlur}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              handleSendMessage();
+            }
+          }}
+          value={message}
+          className="flex-grow pl-12 pr-20 py-3 rounded-2xl bg-[#e9edf1] outline-none focus:ring-2 focus:ring-blue-600"
+        />
+        <BsEmojiSmile className="absolute right-14 text-gray-500" />
+        <IoIosSend
+          size={26}
+          onClick={handleSendMessage}
+          className="text-[#4b91dc] cursor-pointer absolute right-5"
+        />
+      </div>
+    </>
+  )}
+</div>
+
   );
 };
 

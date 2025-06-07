@@ -3,44 +3,57 @@ import useDashboard from "../hooks/useDashboard";
 import Sidebar from "../components/Sidebar";
 import ChatHeader from "../components/ChatHeader";
 import ChatPersons from "../components/ChatPersons";
-import ChatPersonHeader from "../components/ChatPersonHeader";
+import GroupChatbox from "../components/GroupChat";
 import Chatbox from "../components/Chatbox";
 import socket from "../utils/socket";
 import { useSelector } from "react-redux";
 import Groups from "../components/Groups";
-import GroupChatbox from "../components/GroupChat";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const {
-    mutate: Dashboard,
+    mutate: fetchDashboard,
     isPending,
     isError,
     data,
     isSuccess,
+    error,
   } = useDashboard();
+
+  const navigate = useNavigate();
   const [id, setId] = useState(null);
   const [isTabSize, setIsTabSize] = useState(false);
+
   const { isUserSelected } = useSelector((state) => state.user);
   const { selectedItem } = useSelector((state) => state.sidebar);
   const { isGroupSelected } = useSelector((state) => state.group);
 
-
+  // Initial Dashboard fetch
   useEffect(() => {
-    Dashboard();
+    fetchDashboard();
   }, []);
 
+  // Redirect on error
+  useEffect(() => {
+    if (isError && error?.message === "You are not Login") {
+      setTimeout(() => {
+        localStorage.removeItem("userId");
+        navigate("/login");
+      }, 2000);
+    }
+  }, [isError, error, navigate]);
+
+  // Responsive logic
   useEffect(() => {
     const handleResize = () => {
-      setIsTabSize(window.innerWidth < 768);
+      setIsTabSize(window.innerWidth < 640);
     };
-
     window.addEventListener("resize", handleResize);
-
     handleResize();
-
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Setup socket on success
   useEffect(() => {
     if (isSuccess && data?.userName) {
       setId(data.user);
@@ -48,37 +61,34 @@ const Dashboard = () => {
       socket.emit("register", { userId: data.user });
       localStorage.setItem("userId", data.user);
 
-
-  return () => {
-    socket.off("connect"); 
-  }
-
-
+      return () => {
+        socket.off("connect");
+      };
     }
   }, [isSuccess, data]);
 
+  const shouldHideLeftPanel = isTabSize && (isUserSelected || isGroupSelected);
+
   return (
-    <div className="flex bg-[#eeefef]">
+    <div className="flex h-screen bg-slate-50">
       {isPending && <div>Loading...</div>}
-      {isError && <div>Error...</div>}
+      {isError && <div>{error.message}</div>}
 
       {!isPending && !isError && (
         <>
           <Sidebar />
-          <div>
-            {isUserSelected && isTabSize ? null : <ChatHeader />}
 
-            {selectedItem === "chat" ? (
-              isUserSelected && isTabSize ? null : (
-                <ChatPersons Id={`${id}`} />
-              )
-            ) : selectedItem === "group" ? (
-              <Groups/>
-            ) : null}
-          </div>
-          <div>
-            <ChatPersonHeader />
-            {isUserSelected ? <Chatbox Id={`${id}`} /> : isGroupSelected ? <GroupChatbox Id={`${id}`} /> : null}
+          {!shouldHideLeftPanel && (
+            <div className="w-full h-screen max-md:w-[100vw] flex flex-col">
+              <ChatHeader />
+              {selectedItem === "chats" && <ChatPersons Id={id} />}
+              {selectedItem === "group" && <Groups />}
+            </div>
+          )}
+
+          <div className="h-screen">
+            {isUserSelected && <Chatbox Id={id} />}
+            {isGroupSelected && <GroupChatbox Id={id} />}
           </div>
         </>
       )}

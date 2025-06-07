@@ -144,16 +144,16 @@ const ChatPersons = ({ Id }) => {
   };
 
   return (
-    <div className="bg-white w-[30vw] max-md:w-[80vw] h-[82%] mt-1 ml-2 rounded-xl shadow-md">
-      <h2 className="text-[15px] font-light ml-5 pt-3 text-gray-600 mb-4">
-        {selectedItem === "chat"
-          ? "Chats"
+    <div className="bg-slate-50 w-full h-full">
+      <h2 className="text-xl ml-4 leading-normal font-semibold text-gray-800 mb-4">
+        {selectedItem === "chats"
+          ? "Friends"
           : selectedItem === "group"
           ? "Groups"
           : null}
       </h2>
 
-      <div className="space-y-2 h-[32vw] max-md:h-[20rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      <div className="space-y-2  overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         {chats.map((chat, index) => (
           <ChatPerson
             key={chat._id}
